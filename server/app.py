@@ -68,18 +68,21 @@ def forgot_password():
         {'$set': {'reset_token': token, 'reset_token_exp': expiration}}
     )
     
-    reset_url = f"http://localhost:3000/reset-password/{token}"
+    reset_url = f"https://note-taking-app80.netlify.app/reset-password/{token}"
     
-    msg = Message('Password Reset Request',
-                  sender='noreply@yourdomain.com',
-                  recipients=[email])
-    msg.body = f'''To reset your password, visit the following link:
+    try:
+        msg = Message('Password Reset Request',
+                      sender=app.config['MAIL_USERNAME'],
+                      recipients=[email])
+        msg.body = f'''To reset your password, visit the following link:
 {reset_url}
 If you did not make this request then simply ignore this email and no changes will be made.
 '''
-    mail.send(msg)
-    
-    return jsonify({"message": "Reset password email sent."}), 200
+        mail.send(msg)
+        return jsonify({"message": "Reset password email sent."}), 200
+    except Exception as e:
+        print(f"Error sending email: {str(e)}")
+        return jsonify({"message": "Error sending reset email. Please try again later."}), 500
 
 @app.route('/api/reset-password/<token>', methods=['POST'])
 def reset_password(token):

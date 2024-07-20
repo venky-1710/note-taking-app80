@@ -3,16 +3,25 @@ import axios from 'axios';
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 // console.log('API_URL:', API_URL);
 export const forgotPassword = async (email) => {
-  const response = await fetch(`${API_URL}/forgot-password`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ email }),
-  });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.message);
-  return data;
+  try {
+    const response = await fetch(`${API_URL}/forgot-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.message || 'An error occurred while processing your request.');
+    }
+
+    return data;
+  } catch (error) {
+    throw error;
+  }
 };
 
 export const resetPassword = async (token, newPassword) => {
@@ -38,12 +47,12 @@ const register = async (username, email, password) => {
 
 const login = async (identifier, password) => {
   try {
-    console.log('Attempting login to:', `${API_URL}/login`);
+    // console.log('Attempting login to:', `${API_URL}/login`);
     const response = await axios.post(`${API_URL}/login`, { identifier, password });
-    console.log('Login response:', response);
+    // console.log('Login response:', response);
     return response.data;
   } catch (error) {
-    console.error('Login error:', error.response || error);
+    // console.error('Login error:', error.response || error);
     throw error.response ? error.response.data : error;
   }
 };
