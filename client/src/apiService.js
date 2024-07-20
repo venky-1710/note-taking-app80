@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-
+// console.log('API_URL:', API_URL);
 export const forgotPassword = async (email) => {
   const response = await fetch(`${API_URL}/forgot-password`, {
     method: 'POST',
