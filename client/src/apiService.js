@@ -38,9 +38,12 @@ const register = async (username, email, password) => {
 
 const login = async (identifier, password) => {
   try {
+    console.log('Attempting login to:', `${API_URL}/login`);
     const response = await axios.post(`${API_URL}/login`, { identifier, password });
+    console.log('Login response:', response);
     return response.data;
   } catch (error) {
+    console.error('Login error:', error.response || error);
     throw error.response ? error.response.data : error;
   }
 };

@@ -35,13 +35,21 @@ mail = Mail(app)
 # Initialize extensions
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
-CORS(app, resources={r"/api/*": {"origins": "https://note-taking-app80.netlify.app/"}})
+CORS(app, resources={r"/api/*": {
+    "origins": ["https://note-taking-app80.netlify.app"],
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "allow_headers": ["Content-Type", "Authorization"]
+}})
 
 # Initialize MongoDB
 client = MongoClient(os.getenv('MONGODB_URI'))
 db = client['user_database']
 users_collection = db['users']
 notes_collection = db['notes']
+
+@app.route('/api/test', methods=['GET'])
+def test():
+    return jsonify({"message": "API is working"}), 200
 
 @app.route('/api/forgot-password', methods=['POST'])
 def forgot_password():
