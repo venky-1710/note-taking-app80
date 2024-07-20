@@ -35,7 +35,7 @@ mail = Mail(app)
 # Initialize extensions
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+CORS(app, resources={r"/api/*": {"origins": "https://note-taking-app80.netlify.app/"}})
 
 # Initialize MongoDB
 client = MongoClient(os.getenv('MONGODB_URI'))
