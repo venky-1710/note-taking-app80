@@ -36,7 +36,7 @@ mail = Mail(app)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 CORS(app, resources={r"/api/*": {
-    "origins": ["https://note-taking-app80.netlify.app"],
+    "origins": ["https://note-taking-app80.netlify.app", "http://localhost:3000"],
     "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     "allow_headers": ["Content-Type", "Authorization"]
 }})

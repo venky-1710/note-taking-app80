@@ -1,22 +1,26 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { register } from '../apiService';
-import toast from './toastManager'; // Make sure this path is correct
+import toast from './toastManager';
 
 const RegisterPage = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
     try {
       const response = await register(username, email, password);
       toast.success(response.message);
       navigate('/login');
     } catch (error) {
       toast.error(error.message || 'An error occurred during registration');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -54,7 +58,16 @@ const RegisterPage = () => {
           />
           <label>Password</label>
         </div>
-        <button type="submit">Register</button>
+        <button type="submit" disabled={isLoading}>
+          {isLoading ? (
+            <>
+              <span className="spinner"></span>
+              Registering...
+            </>
+          ) : (
+            'Register'
+          )}
+        </button>
         <div className="register">
           <p>Already have an account? <a href=" " onClick={(e) => { e.preventDefault(); navigate('/login'); }}>Login</a></p>
         </div>

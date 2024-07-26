@@ -6,15 +6,19 @@ import './Toast.css';
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
     try {
       const response = await forgotPassword(email);
       toast.success(response.message);
     } catch (error) {
       toast.error(error.message || 'An error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -32,7 +36,16 @@ const ForgotPasswordPage = () => {
           />
           <label>Email</label>
         </div>
-        <button type="submit">Reset Password</button>
+        <button type="submit" disabled={isLoading}>
+          {isLoading ? (
+            <>
+              <span className="spinner"></span>
+              Sending...
+            </>
+          ) : (
+            'Reset Password'
+          )}
+        </button>
         <div className="register">
           <p>Remember your password? <a href=" " onClick={(e) => { e.preventDefault(); navigate('/login'); }}>Login</a></p>
         </div>
