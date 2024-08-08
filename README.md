@@ -1,4 +1,4 @@
-# Note-Taking Application - live demo[https://note-taking-app80.netlify.app/]
+# Note-Taking Application - [live demo](https://note-taking-app80.netlify.app/)
 
 A full-stack note-taking application built with React for the frontend and Flask for the backend. This application allows users to register, log in, create, edit, and delete notes.
 
