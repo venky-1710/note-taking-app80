@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getProtected, addNote, getNotes, updateNote, deleteNote, logout  } from '../apiService';
+import { getProtected, addNote, getNotes, updateNote, deleteNote, logout, validateToken } from '../apiService';
 // import './MainPage.css';
 
 const MainPage = () => {
@@ -9,28 +9,39 @@ const MainPage = () => {
   const [noteTitle, setNoteTitle] = useState('');
   const [noteContent, setNoteContent] = useState('');
   const [editingNoteId, setEditingNoteId] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
+  const fetchData = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setMessage('You need to log in first.');
+      navigate('/login');
+      return;
+    }
+    try {
+      const response = await getProtected(token);
+      setMessage(`Welcome ${response.username}`);
+      fetchNotes();
+    } catch (error) {
+      setMessage(error.message);
+      if (error.response && error.response.status === 401) {
+        navigate('/login');
+      }
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setMessage('You need to log in first.');
+    const checkAuth = async () => {
+      const isValid = await validateToken();
+      if (!isValid) {
         navigate('/login');
         return;
       }
-      try {
-        const response = await getProtected(token);
-        setMessage(`Welcome ${response.username}`);
-        fetchNotes();
-      } catch (error) {
-        setMessage(error.message);
-        if (error.response && error.response.status === 401) {
-          navigate('/login');
-        }
-      }
+      setIsLoading(false);
+      fetchData();
     };
-    fetchData();
+    checkAuth();
   }, [navigate]);
 
   const fetchNotes = async () => {
@@ -92,6 +103,11 @@ const MainPage = () => {
     logout();
     navigate('/login');
   };
+
+  // Add loading state
+  if (isLoading) {
+    return <div className="loading">Loading...</div>;
+  }
 
   return (
     <div className="main-container">

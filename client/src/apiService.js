@@ -1,77 +1,57 @@
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-// console.log('API_URL:', API_URL);
-export const forgotPassword = async (email) => {
-  try {
-    const response = await fetch(`${API_URL}/forgot-password`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email }),
-    });
 
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.message || 'An error occurred while processing your request.');
+const handleApiError = (error) => {
+  if (error.response) {
+    if (error.response.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
     }
-
-    return data;
-  } catch (error) {
-    throw error;
+    throw new Error(error.response.data.message || 'An error occurred');
   }
+  throw new Error('Network error occurred');
 };
 
-export const resetPassword = async (token, newPassword) => {
-  const response = await fetch(`${API_URL}/reset-password/${token}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ new_password: newPassword }),
-  });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.message);
-  return data;
-};
-const register = async (username, email, password) => {
+// Auth related functions
+const validateToken = async () => {
+  const token = localStorage.getItem('token');
+  if (!token) return false;
+  
   try {
-    const response = await axios.post(`${API_URL}/register`, { username, email, password });
-    return response.data;
+    const response = await axios.get(`${API_URL}/validate-token`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data.valid;
   } catch (error) {
-    throw error.response ? error.response.data : error;
+    localStorage.removeItem('token');
+    return false;
   }
 };
 
 const login = async (identifier, password) => {
   try {
-    // console.log('Attempting login to:', `${API_URL}/login`);
     const response = await axios.post(`${API_URL}/login`, { identifier, password });
-    // console.log('Login response:', response);
     return response.data;
   } catch (error) {
-    // console.error('Login error:', error.response || error);
-    throw error.response ? error.response.data : error;
+    handleApiError(error);
+  }
+};
+
+const register = async (username, email, password) => {
+  try {
+    const response = await axios.post(`${API_URL}/register`, { username, email, password });
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
   }
 };
 
 const logout = () => {
-    localStorage.removeItem('token');
-  };
-
-const getProtected = async (token) => {
-  try {
-    const response = await axios.get(`${API_URL}/protected`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data;
-  } catch (error) {
-    throw error.response ? error.response.data : error;
-  }
+  localStorage.removeItem('token');
 };
 
+// Note related functions
 const getNotes = async (token) => {
   try {
     const response = await axios.get(`${API_URL}/notes`, {
@@ -79,7 +59,7 @@ const getNotes = async (token) => {
     });
     return response.data;
   } catch (error) {
-    throw error.response ? error.response.data : error;
+    handleApiError(error);
   }
 };
 
@@ -92,7 +72,7 @@ const addNote = async (token, title, content) => {
     );
     return response.data;
   } catch (error) {
-    throw error.response ? error.response.data : error;
+    handleApiError(error);
   }
 };
 
@@ -105,7 +85,7 @@ const updateNote = async (token, noteId, title, content) => {
     );
     return response.data;
   } catch (error) {
-    throw error.response ? error.response.data : error;
+    handleApiError(error);
   }
 };
 
@@ -116,8 +96,52 @@ const deleteNote = async (token, noteId) => {
     });
     return response.data;
   } catch (error) {
-    throw error.response ? error.response.data : error;
+    handleApiError(error);
   }
 };
 
-export { register, login, getProtected, getNotes, addNote, updateNote, deleteNote, logout  };
+// Password reset functions
+const forgotPassword = async (email) => {
+  try {
+    const response = await axios.post(`${API_URL}/forgot-password`, { email });
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+};
+
+const resetPassword = async (token, newPassword) => {
+  try {
+    const response = await axios.post(`${API_URL}/reset-password/${token}`, {
+      new_password: newPassword
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+};
+
+const getProtected = async (token) => {
+  try {
+    const response = await axios.get(`${API_URL}/protected`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+};
+
+export {
+  validateToken,
+  login,
+  register,
+  logout,
+  getNotes,
+  addNote,
+  updateNote,
+  deleteNote,
+  forgotPassword,
+  resetPassword,
+  getProtected
+};

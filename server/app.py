@@ -23,6 +23,8 @@ app = Flask(__name__)
 # Configurations
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=1)
+app.config['JWT_ERROR_MESSAGE_KEY'] = 'message'
 
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
 app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
@@ -38,7 +40,9 @@ jwt = JWTManager(app)
 CORS(app, resources={r"/api/*": {
     "origins": ["https://note-taking-app80.netlify.app", "http://localhost:3000"],
     "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    "allow_headers": ["Content-Type", "Authorization"]
+    "allow_headers": ["Content-Type", "Authorization"],
+    "expose_headers": ["Authorization"],
+    "supports_credentials": True
 }})
 
 # Initialize MongoDB
@@ -146,6 +150,38 @@ def register():
 
     return jsonify({"message": "User registered successfully. Please log in."}), 201
 
+# Add global error handler
+@app.errorhandler(Exception)
+def handle_error(error):
+    if hasattr(error, 'code') and error.code == 404:
+        return jsonify({"message": "Resource not found"}), 404
+    elif hasattr(error, 'description'):
+        return jsonify({"message": error.description}), error.code
+    return jsonify({"message": "Internal server error"}), 500
+
+# Add this route to validate JWT token
+@app.route('/api/validate-token', methods=['GET'])
+@jwt_required()
+def validate_token():
+    try:
+        current_user = get_jwt_identity()
+        return jsonify({"valid": True, "username": current_user}), 200
+    except Exception:
+        return jsonify({"valid": False}), 401
+
+# Add these error handlers after initializing JWTManager
+@jwt.expired_token_loader
+def expired_token_callback(jwt_header, jwt_payload):
+    return jsonify({"message": "Token has expired"}), 401
+
+@jwt.invalid_token_loader
+def invalid_token_callback(error):
+    return jsonify({"message": "Invalid token"}), 401
+
+@jwt.unauthorized_loader
+def missing_token_callback(error):
+    return jsonify({"message": "Token is missing"}), 401
+
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -160,7 +196,12 @@ def login():
     if not bcrypt.check_password_hash(user['password'], password):
         return jsonify({"message": "Invalid credentials"}), 401
 
-    access_token = create_access_token(identity={'username': user['username']})
+    # Create token with additional claims
+    additional_claims = {"username": user['username']}
+    access_token = create_access_token(
+        identity=user['username'],
+        additional_claims=additional_claims
+    )
     return jsonify(access_token=access_token, username=user['username'], message="Login successful"), 200
 
 @app.route('/api/notes', methods=['POST'])
@@ -169,7 +210,7 @@ def add_note():
     data = request.get_json()
     current_user = get_jwt_identity()
     note = {
-        'user': current_user['username'],
+        'user': current_user,
         'title': data.get('title'),
         'content': data.get('content')
     }
@@ -180,7 +221,7 @@ def add_note():
 @jwt_required()
 def get_notes():
     current_user = get_jwt_identity()
-    notes = list(notes_collection.find({'user': current_user['username']}))
+    notes = list(notes_collection.find({'user': current_user}))
     for note in notes:
         note['_id'] = str(note['_id'])
     return jsonify(notes), 200
@@ -191,7 +232,7 @@ def update_note(note_id):
     data = request.get_json()
     current_user = get_jwt_identity()
     notes_collection.update_one(
-        {'_id': ObjectId(note_id), 'user': current_user['username']},
+        {'_id': ObjectId(note_id), 'user': current_user},
         {'$set': {'title': data.get('title'), 'content': data.get('content')}}
     )
     return jsonify({"message": "Note updated successfully"}), 200
@@ -200,14 +241,19 @@ def update_note(note_id):
 @jwt_required()
 def delete_note(note_id):
     current_user = get_jwt_identity()
-    notes_collection.delete_one({'_id': ObjectId(note_id), 'user': current_user['username']})
+    notes_collection.delete_one({'_id': ObjectId(note_id), 'user': current_user})
     return jsonify({"message": "Note deleted successfully"}), 200
 
 @app.route('/api/protected', methods=['GET'])
 @jwt_required()
 def protected():
-    current_user = get_jwt_identity()
-    return jsonify(username=current_user['username']), 200
+    try:
+        current_user = get_jwt_identity()
+        if not current_user:
+            return jsonify({"message": "Invalid token"}), 401
+        return jsonify({"username": current_user, "authenticated": True}), 200
+    except Exception as e:
+        return jsonify({"message": "An error occurred", "error": str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
